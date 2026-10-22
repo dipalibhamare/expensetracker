@@ -1,0 +1,200 @@
+<div class="page">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">₹</div>
+      <div>
+        <h1>Expense Tracker</h1>
+        <p>Track your money, understand your spending.</p>
+      </div>
+    </div>
+    <button class="clear-btn" type="button" (click)="clearAll()" [disabled]="expenses.length === 0">
+      Clear All
+    </button>
+  </header>
+
+  <main class="container">
+    <section class="summary-grid">
+      <div class="summary-card main-total">
+        <div class="summary-label">Total Expenses</div>
+        <div class="summary-value">{{ formatCurrency(totalExpenses) }}</div>
+        <div class="summary-small">{{ expenses.length }} expense{{ expenses.length === 1 ? '' : 's' }} recorded</div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-label">Average Expense</div>
+        <div class="summary-value">{{ formatCurrency(averageExpense) }}</div>
+        <div class="summary-small">per transaction</div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-label">Showing</div>
+        <div class="summary-value">{{ formatCurrency(visibleTotal) }}</div>
+        <div class="summary-small">after current filters</div>
+      </div>
+    </section>
+
+    <section class="content-grid">
+      <div class="left-column">
+        <section class="card form-card">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">{{ editingId !== null ? 'EDIT EXPENSE' : 'NEW EXPENSE' }}</span>
+              <h2>{{ editingId !== null ? 'Update expense' : 'Add an expense' }}</h2>
+            </div>
+            <span class="form-icon">+</span>
+          </div>
+
+          <form (ngSubmit)="addOrUpdateExpense()">
+            <div class="form-grid">
+              <label>
+                <span>Expense name</span>
+                <input
+                  type="text"
+                  name="title"
+                  [(ngModel)]="title"
+                  placeholder="e.g. Grocery shopping"
+                  required>
+              </label>
+
+              <label>
+                <span>Amount (₹)</span>
+                <input
+                  type="number"
+                  name="amount"
+                  [(ngModel)]="amount"
+                  placeholder="500"
+                  min="1"
+                  required>
+              </label>
+
+              <label>
+                <span>Category</span>
+                <select name="category" [(ngModel)]="category">
+                  <option *ngFor="let item of categories" [value]="item">{{ item }}</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Date</span>
+                <input type="date" name="date" [(ngModel)]="date" required>
+              </label>
+
+              <label class="full-width">
+                <span>Note <small>(optional)</small></span>
+                <input
+                  type="text"
+                  name="note"
+                  [(ngModel)]="note"
+                  placeholder="Add a short note">
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button class="primary-btn" type="submit">
+                {{ editingId !== null ? 'Save Changes' : 'Add Expense' }}
+              </button>
+              <button class="secondary-btn" type="button" *ngIf="editingId !== null" (click)="resetForm()">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="section-heading list-heading">
+            <div>
+              <span class="eyebrow">TRANSACTIONS</span>
+              <h2>Your expenses</h2>
+            </div>
+            <span class="count-badge">{{ filteredExpenses.length }}</span>
+          </div>
+
+          <div class="filters">
+            <div class="search-box">
+              <span>⌕</span>
+              <input
+                type="text"
+                [(ngModel)]="searchText"
+                placeholder="Search expenses...">
+            </div>
+
+            <select [(ngModel)]="filterCategory">
+              <option value="All">All categories</option>
+              <option *ngFor="let item of categories" [value]="item">{{ item }}</option>
+            </select>
+
+            <input type="date" [(ngModel)]="filterDate">
+          </div>
+
+          <div class="expense-list" *ngIf="filteredExpenses.length > 0; else emptyState">
+            <article class="expense-row" *ngFor="let expense of filteredExpenses">
+              <div class="expense-avatar">{{ expense.category.charAt(0) }}</div>
+
+              <div class="expense-info">
+                <h3>{{ expense.title }}</h3>
+                <div class="meta">
+                  <span>{{ expense.category }}</span>
+                  <span>•</span>
+                  <span>{{ expense.date | date:'dd MMM yyyy' }}</span>
+                  <span *ngIf="expense.note">• {{ expense.note }}</span>
+                </div>
+              </div>
+
+              <div class="expense-amount">{{ formatCurrency(expense.amount) }}</div>
+
+              <div class="row-actions">
+                <button type="button" class="icon-btn edit" title="Edit" (click)="editExpense(expense)">✎</button>
+                <button type="button" class="icon-btn delete" title="Delete" (click)="deleteExpense(expense.id)">×</button>
+              </div>
+            </article>
+          </div>
+
+          <ng-template #emptyState>
+            <div class="empty-state">
+              <div class="empty-icon">₹</div>
+              <h3>No expenses found</h3>
+              <p>Add your first expense or change the current filters.</p>
+            </div>
+          </ng-template>
+        </section>
+      </div>
+
+      <aside class="right-column">
+        <section class="card category-card">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">BREAKDOWN</span>
+              <h2>Spending by category</h2>
+            </div>
+            <span class="chart-icon">◔</span>
+          </div>
+
+          <div class="category-list" *ngIf="categoryTotals.length > 0; else noCategoryData">
+            <div class="category-item" *ngFor="let item of categoryTotals">
+              <div class="category-line">
+                <span>{{ item.category }}</span>
+                <strong>{{ formatCurrency(item.total) }}</strong>
+              </div>
+              <div class="progress">
+                <div class="progress-bar" [style.width.%]="item.percentage"></div>
+              </div>
+              <small>{{ item.percentage | number:'1.0-0' }}% of total spending</small>
+            </div>
+          </div>
+
+          <ng-template #noCategoryData>
+            <div class="mini-empty">Category data will appear here after you add expenses.</div>
+          </ng-template>
+        </section>
+
+        <section class="tip-card">
+          <div class="tip-icon">💡</div>
+          <div>
+            <h3>Quick tip</h3>
+            <p>Your expenses are automatically saved in this browser using localStorage.</p>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+</div>
